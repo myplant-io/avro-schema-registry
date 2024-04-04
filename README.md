@@ -2,9 +2,9 @@
 
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
 
-[![Build Status](https://travis-ci.org/salsify/avro-schema-registry.svg?branch=master)][travis]
+[![Build Status](https://circleci.com/gh/salsify/avro-schema-registry.svg?style=svg)][circleci]
 
-[travis]: https://travis-ci.org/salsify/avro-schema-registry
+[circleci]: https://circleci.com/gh/salsify/avro-schema-registry
 
 A service for storing and retrieving versions of Avro schemas.
 
@@ -44,7 +44,7 @@ At some point in the future the original `fingerprint` column will be removed.
 This application provides the same API as the Confluent
 [Schema Registry](http://docs.confluent.io/3.1.0/schema-registry/docs/api.html).
 
-The service is implemented as a Rails 5.0 application and stores Avro schemas in
+The service is implemented as a Rails 7.0 application and stores Avro schemas in
 Postgres. The API is implemented using [Grape](https://github.com/ruby-grape/grape).
 
 ### Why?
@@ -146,7 +146,7 @@ Accept: application/vnd.schemaregistry.v1+json, application/vnd.schemaregistry+j
 
 ## Setup
 
-The application is written using Ruby 2.3.3. Start the service using the following
+The application is written using Ruby 3.2.2. Start the service using the following
 steps:
 
 ```bash

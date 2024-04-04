@@ -108,14 +108,14 @@ describe SubjectAPI do
     end
 
     context "when the subject exists" do
-      let(:subject) { create(:subject) }
-      let!(:schema_versions) { Array.new(1) { create(:version, subject: subject) } }
+      let(:schema_subject) { create(:subject) }
+      let!(:schema_versions) { Array.new(1) { create(:version, subject: schema_subject) } }
       let(:expected) do
         schema_versions.map(&:version).sort.to_json
       end
 
       it "returns a list of the versions" do
-        get("/subjects/#{subject.name}/versions")
+        get("/subjects/#{schema_subject.name}/versions")
         expect(response).to be_ok
         expect(response.body).to eq(expected)
       end
@@ -151,10 +151,12 @@ describe SubjectAPI do
       let(:subject_name) { version.subject.name }
       let(:id) { version.schema_id }
       let(:schema) { version.schema }
+
       let(:expected) do
         {
           subject: subject_name,
-          id: id,
+          id: version.schema_id,
+          name: subject_name,
           version: version.version,
           schema: schema.json
         }.to_json
@@ -163,6 +165,7 @@ describe SubjectAPI do
       it "returns the schema" do
         get("/subjects/#{subject_name}/versions/#{version.version}")
         expect(response).to be_ok
+        expect(JSON.parse(response.body)['id']).to eq(version.schema_id)
         expect(response.body).to be_json_eql(expected)
       end
 
@@ -505,23 +508,23 @@ describe SubjectAPI do
 
     context "when the schema is already registered under the subject" do
       let!(:version) { create(:schema_version) }
-      let(:subject) { version.subject }
+      let(:schema_subject) { version.subject }
 
       it "returns the id of the schema" do
-        post("/subjects/#{subject.name}/versions", params: { schema: version.schema.json })
+        post("/subjects/#{schema_subject.name}/versions", params: { schema: version.schema.json })
         expect(response).to be_ok
         expect(response.body).to be_json_eql({ id: version.schema_id }.to_json).including(:id)
       end
 
       it "does not create a new version" do
         expect do
-          post("/subjects/#{subject.name}/versions", params: { schema: version.schema.json })
+          post("/subjects/#{schema_subject.name}/versions", params: { schema: version.schema.json })
         end.not_to change(SchemaVersion, :count)
       end
 
       it "ignores setting a new compatibility level" do
         expect do
-          post("/subjects/#{subject.name}/versions",
+          post("/subjects/#{schema_subject.name}/versions",
                params: { schema: version.schema.json, after_compatibility: 'BACKWARD' })
         end.not_to change(Config, :count)
       end
@@ -534,7 +537,7 @@ describe SubjectAPI do
       end
 
       let!(:version) { create(:schema_version) }
-      let(:subject) { version.subject }
+      let(:schema_subject) { version.subject }
       let(:json) do
         JSON.parse(version.schema.json).tap do |h|
           h['fields'] << { type: :string, name: :additional_field, default: '' }
@@ -544,7 +547,7 @@ describe SubjectAPI do
       it "returns the id of a new schema" do
         expect do
           expect do
-            post("/subjects/#{subject.name}/versions", params: { schema: json })
+            post("/subjects/#{schema_subject.name}/versions", params: { schema: json })
           end.to change(Schema, :count).by(1)
         end.to change(SchemaVersion, :count).by(1)
 
@@ -569,7 +572,7 @@ describe SubjectAPI do
         it "returns the id of a new schema" do
           expect do
             expect do
-              post("/subjects/#{subject.name}/versions", params: { schema: json })
+              post("/subjects/#{schema_subject.name}/versions", params: { schema: json })
             end.to change(Schema, :count).by(1)
           end.to change(SchemaVersion, :count).by(1)
 
@@ -582,7 +585,7 @@ describe SubjectAPI do
         let(:json) { build(:schema).json }
 
         it "returns an incompatible schema error" do
-          post("/subjects/#{subject.name}/versions", params: { schema: json })
+          post("/subjects/#{schema_subject.name}/versions", params: { schema: json })
           expect(status).to eq(409)
           expect(response.body).to be_json_eql(SchemaRegistry::Errors::INCOMPATIBLE_AVRO_SCHEMA.to_json)
         end
@@ -592,7 +595,8 @@ describe SubjectAPI do
             expect do
               expect do
                 expect do
-                  post("/subjects/#{subject.name}/versions", params: { schema: json, with_compatibility: 'NONE' })
+                  post("/subjects/#{schema_subject.name}/versions",
+                       params: { schema: json, with_compatibility: 'NONE' })
                 end.to change(Schema, :count).by(1)
               end.to change(SchemaVersion, :count).by(1)
             end.not_to change(Config, :count)
@@ -605,21 +609,21 @@ describe SubjectAPI do
               expect do
                 expect do
                   expect do
-                    post("/subjects/#{subject.name}/versions",
+                    post("/subjects/#{schema_subject.name}/versions",
                          params: { schema: json, with_compatibility: 'NONE', after_compatibility: after_compatibility })
                   end.to change(Schema, :count).by(1)
                 end.to change(SchemaVersion, :count).by(1)
               end.to change(Config, :count).by(1)
 
-              expect(Config.find_by(subject_id: subject.id).compatibility).to eq(after_compatibility)
+              expect(Config.find_by(subject_id: schema_subject.id).compatibility).to eq(after_compatibility)
             end
 
             context "when config already exists for the subject" do
-              let!(:config) { create(:config, subject_id: subject.id, compatibility: 'FULL') }
+              let!(:config) { create(:config, subject_id: schema_subject.id, compatibility: 'FULL') }
 
               it "updates the config for the subject" do
                 expect do
-                  post("/subjects/#{subject.name}/versions",
+                  post("/subjects/#{schema_subject.name}/versions",
                        params: { schema: json, with_compatibility: 'NONE', after_compatibility: after_compatibility })
                 end.not_to change(Config, :count)
                 expect(config.reload.compatibility).to eq(after_compatibility)
@@ -821,7 +825,7 @@ describe SubjectAPI do
     end
 
     context "when fingerprint_version is 'all'" do
-      let(:fingerprint_version) { '2' }
+      let(:fingerprint_version) { 'all' }
 
       it_behaves_like "checking for schema existence"
     end
