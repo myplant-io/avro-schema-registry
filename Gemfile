@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-ruby '3.2.2'
+ruby '3.3.6'
 
 source 'https://rubygems.org'
 
@@ -11,7 +11,7 @@ gem 'grape'
 gem 'pg'
 gem 'private_attr', require: 'private_attr/everywhere'
 gem 'puma', '>= 5.6.7'
-gem 'rails', '~> 7.0.0'
+gem 'rails', '~> 7.1.5'
 
 group :test do
   gem 'json_spec'
